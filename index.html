@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>টাস্ক ও আয়</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- Monetag SDK: Monetag ড্যাশবোর্ডের স্ক্রিপ্টের সাথে মিলিয়ে নিন -->
+<script src="//libtl.com/sdk.js" data-zone="12091738" data-sdk="show_12091738"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e2233; --surface:#16324a; --line:#264a68; --text:#eef3f7; --muted:#8fa6b8;
+  --gold:#e8b04b; --gold-ink:#2a1d04; --ok:#5fd0a5; --bad:#f27a6b;
+  color-scheme: dark;
+}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:'Hind Siliguri',system-ui,sans-serif;font-size:16px;line-height:1.5;
+  padding-top:env(safe-area-inset-top,0px)}
+#app{max-width:520px;margin:0 auto;padding:16px 16px calc(84px + env(safe-area-inset-bottom,0px))}
+h2{font-size:18px;font-weight:600;margin:22px 0 10px}
+.muted{color:var(--muted);font-size:14px}
+.hero{padding:18px 4px 8px}
+.hero .amt{font-size:56px;font-weight:700;color:var(--gold);line-height:1.1;letter-spacing:-1px}
+.bar{height:8px;background:var(--surface);border-radius:8px;overflow:hidden;margin:10px 0 4px}
+.bar i{display:block;height:100%;background:var(--gold);border-radius:8px;transition:width .4s}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:15px;font:600 17px 'Hind Siliguri',sans-serif;
+  background:var(--gold);color:var(--gold-ink);cursor:pointer}
+.btn:disabled{opacity:.5}
+.btn.alt{background:var(--surface);color:var(--text);border:1px solid var(--line)}
+.btn.sm{display:inline-block;width:auto;padding:7px 12px;font-size:14px;border-radius:10px}
+.btn:focus-visible,input:focus-visible,.chip:focus-visible,nav button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.panel{background:var(--surface);border-radius:14px;padding:14px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.pos{color:var(--ok)} .neg{color:var(--bad)}
+input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:13px;font:16px 'Hind Siliguri',sans-serif;margin-top:8px}
+.chips{display:flex;gap:8px}
+.chip{flex:1;text-align:center;padding:11px 4px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font:600 15px 'Hind Siliguri',sans-serif;cursor:pointer}
+.chip.on{border-color:var(--gold);color:var(--gold)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;background:none;border:0;color:var(--muted);padding:14px 4px;font:600 15px 'Hind Siliguri',sans-serif;cursor:pointer}
+nav button.on{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold)}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(90px + env(safe-area-inset-bottom,0px));max-width:488px;margin:auto;
+  background:var(--text);color:var(--bg);padding:12px 14px;border-radius:12px;font-weight:600;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+.gate{padding:40px 4px}
+.gate h1{font-size:26px;line-height:1.3;margin-bottom:8px}
+.gate .btn{margin-top:10px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end}
+.sheet.on{display:flex}
+.sheet>div{background:var(--surface);width:100%;max-width:520px;margin:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+.tag{font-size:13px;padding:2px 8px;border-radius:8px;background:var(--bg)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"><p class="muted" style="padding:40px 0">লোড হচ্ছে…</p></div>
+<div class="toast" id="toast"></div>
+<div class="sheet" id="sheet"><div id="sheetBody"></div></div>
+
+<script>
+// ===== এখানে নিজের তথ্য বসান =====
+const CONFIG = {
+  API_URL: 'https://vrcwdapkcrcsghkwxeyt.supabase.co/functions/v1/api',
+  REF_LINK_BASE: 'https://t.me/YOUR_BOT_USERNAME/YOUR_APP_SHORTNAME', // BotFather /newapp এর লিংক
+};
+// ==================================
+
+const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+const MSG = {
+  not_joined:'আগে চ্যানেল ও গ্রুপে জয়েন করুন।', limit:'আজকের টাস্ক শেষ। কাল আবার আসুন।', banned:'আপনার অ্যাকাউন্ট বন্ধ আছে।',
+  too_fast:'অ্যাড পুরো দেখা হয়নি। আবার চেষ্টা করুন।', no_start:'টাস্ক শুরু হয়নি। আবার চেষ্টা করুন।',
+  low_balance:'ব্যালেন্স যথেষ্ট নেই।', below_min:'ন্যূনতম উইথড্রর চেয়ে কম।', pending_exists:'আগের উইথড্র এখনো পেন্ডিং আছে।',
+  bad_number:'নম্বরটি ১১ digit এর হতে হবে (01XXXXXXXXX)।', bad_amount:'সঠিক পরিমাণ লিখুন।', bad_method:'মাধ্যম বেছে নিন।',
+  auth:'টেলিগ্রামের ভেতর থেকে অ্যাপ খুলুন।', server:'সার্ভারে সমস্যা। একটু পরে চেষ্টা করুন।'
+};
+const S = { st:null, tab:'home', busy:false, method:'bkash', adm:{} };
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const bn = (n) => Number(n).toLocaleString('bn-BD', { maximumFractionDigits: 2 });
+const taka = (n) => '৳ ' + bn(n);
+const when = (d) => new Date(d).toLocaleString('bn-BD', { day:'numeric', month:'short', hour:'numeric', minute:'2-digit' });
+const HTYPE = { task:'টাস্ক', referral:'রেফার বোনাস', withdraw:'উইথড্র', refund:'ফেরত', admin_add:'অ্যাডমিন যোগ' };
+const WSTAT = { pending:'পেন্ডিং', paid:'পেইড', rejected:'বাতিল' };
+
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2600); }
+
+async function api(action, data = {}){
+  const r = await fetch(CONFIG.API_URL, { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ action, initData: tg.initData, ...data }) });
+  const j = await r.json().catch(() => ({ error:'server' }));
+  if (j.error) throw new Error(j.error);
+  return j;
+}
+const fail = (e) => toast(MSG[e.message] || MSG.server);
+
+async function boot(){
+  try {
+    S.st = await api('init', {});
+    const j = await api('check_join', {});
+    S.st.user.joined = j.joined;
+    if (j.joined) S.st = { ...S.st, ...(await api('state', {})) };
+    render();
+  } catch (e) { $('#app').innerHTML = `<p class="muted" style="padding:40px 0">${esc(MSG[e.message] || MSG.server)}</p>`; }
+}
+
+function render(){
+  const { user } = S.st;
+  if (user.banned) { $('#app').innerHTML = `<div class="gate"><h1>অ্যাকাউন্ট বন্ধ</h1><p class="muted">সমস্যা হলে অ্যাডমিনের সাথে যোগাযোগ করুন।</p></div>`; return; }
+  if (!user.joined) return renderGate();
+  const tabs = [['home','কাজ'],['ref','রেফার'],['wd','উইথড্র']];
+  if (S.st.is_admin) tabs.push(['adm','অ্যাডমিন']);
+  const body = { home:viewHome, ref:viewRef, wd:viewWd, adm:viewAdm }[S.tab]();
+  $('#app').innerHTML = body + `<nav>${tabs.map(([k,l]) => `<button class="${S.tab===k?'on':''}" data-tab="${k}">${l}</button>`).join('')}</nav>`;
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); if (S.tab==='adm') loadAdmin(); });
+  bind();
+}
+
+function renderGate(){
+  const { links } = S.st;
+  $('#app').innerHTML = `<div class="gate"><h1>শুরু করতে আগে জয়েন করুন</h1>
+    <p class="muted">চ্যানেল ও গ্রুপ দুটোতেই জয়েন করলে কাজ আর উইথড্র চালু হবে।</p>
+    ${links.channel ? `<button class="btn alt" data-open="${esc(links.channel)}">চ্যানেলে জয়েন করুন</button>` : ''}
+    ${links.group ? `<button class="btn alt" data-open="${esc(links.group)}">গ্রুপে জয়েন করুন</button>` : ''}
+    <button class="btn" id="recheck">জয়েন করেছি, চেক করুন</button></div>`;
+  document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => tg.openTelegramLink(b.dataset.open));
+  $('#recheck').onclick = async () => {
+    try { const j = await api('check_join', {}); if (!j.joined) return toast('এখনো জয়েন করা হয়নি।');
+      S.st = { ...S.st, ...(await api('state', {})) }; render(); } catch (e) { fail(e); }
+  };
+}
+
+function viewHome(){
+  const { user, settings, history } = S.st; const lim = settings.daily_limit || 30;
+  const pct = Math.min(100, (user.tasks_today / lim) * 100);
+  return `<div class="hero"><div class="muted">আপনার ব্যালেন্স</div><div class="amt">${taka(user.balance)}</div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    <div class="muted">আজ ${bn(user.tasks_today)}/${bn(lim)} টাস্ক · মোট ${bn(user.tasks_done)}</div></div>
+    <button class="btn" id="task" ${S.busy?'disabled':''}>${S.busy?'অপেক্ষা করুন…':'অ্যাড দেখে টাস্ক করুন'}</button>
+    <h2>সাম্প্রতিক হিসাব</h2><div class="panel">${history.length ? history.map(h => `<div class="row"><div>${HTYPE[h.type]||esc(h.type)}<div class="muted">${when(h.created_at)}</div></div>
+      <b class="${h.amount>=0?'pos':'neg'}">${h.amount>0?'+':''}${taka(h.amount)}</b></div>`).join('') : '<p class="muted">এখনো কিছু নেই। প্রথম টাস্কটি করুন।</p>'}</div>`;
+}
+
+function viewRef(){
+  const { user, settings } = S.st;
+  return `<h2>বন্ধুকে রেফার করুন</h2><div class="panel"><p>বন্ধু জয়েন করে চ্যানেল ও গ্রুপে ঢুকলে আপনি পাবেন <b class="pos">${taka(settings.referral_bonus||2)}</b>।</p>
+    <p class="muted" style="margin-top:6px">এ পর্যন্ত সফল রেফার: ${bn(user.referral_count)} জন</p></div>
+    <button class="btn" id="share">লিংক শেয়ার করুন</button><div style="height:10px"></div><button class="btn alt" id="copy">লিংক কপি করুন</button>`;
+}
+
+function viewWd(){
+  const { settings, withdrawals, user } = S.st;
+  return `<h2>টাকা তুলুন</h2><div class="panel"><div class="chips">${['bkash','nagad','rocket'].map(m => `<button class="chip ${S.method===m?'on':''}" data-m="${m}">${{bkash:'বিকাশ',nagad:'নগদ',rocket:'রকেট'}[m]}</button>`).join('')}</div>
+    <input id="wnum" inputmode="numeric" maxlength="11" placeholder="নম্বর (01XXXXXXXXX)">
+    <input id="wamt" inputmode="decimal" placeholder="পরিমাণ (ন্যূনতম ${bn(settings.min_withdraw||50)})">
+    <p class="muted" style="margin:8px 0">ব্যালেন্স ${taka(user.balance)}। অ্যাডমিন যাচাই করে পাঠাবেন।</p>
+    <button class="btn" id="wsend">উইথড্র রিকোয়েস্ট পাঠান</button></div>
+    <h2>আগের রিকোয়েস্ট</h2><div class="panel">${withdrawals.length ? withdrawals.map(w => `<div class="row"><div>${esc(w.method)} · ${esc(w.number)}<div class="muted">${when(w.created_at)}</div></div>
+      <div style="text-align:right"><b>${taka(w.amount)}</b><div class="tag">${WSTAT[w.status]||esc(w.status)}</div></div></div>`).join('') : '<p class="muted">এখনো কোনো রিকোয়েস্ট নেই।</p>'}</div>`;
+}
+
+function viewAdm(){
+  const a = S.adm;
+  return `<h2>ড্যাশবোর্ড</h2><div class="panel">${a.stats ? `<div class="row"><span>মোট ইউজার</span><b>${bn(a.stats.users)}</b></div>
+    <div class="row"><span>মোট টাস্ক</span><b>${bn(a.stats.tasks)}</b></div><div class="row"><span>ইউজারদের মোট ব্যালেন্স</span><b>${taka(a.stats.balance)}</b></div>
+    <div class="row"><span>পেন্ডিং উইথড্র</span><b>${bn(a.stats.pending)}</b></div>` : '<p class="muted">লোড হচ্ছে…</p>'}</div>
+    <h2>পেন্ডিং উইথড্র</h2><div class="panel">${(a.wds||[]).length ? a.wds.map(w => `<div class="row"><div>${esc(w.users?.first_name)} <span class="muted">${w.users?.username?'@'+esc(w.users.username):''}</span>
+      <div>${esc(w.method)} · ${esc(w.number)} · <b>${taka(w.amount)}</b></div></div>
+      <div><button class="btn sm" data-wd="${w.id}" data-s="paid">পেইড</button> <button class="btn sm alt" data-wd="${w.id}" data-s="rejected">বাতিল</button></div></div>`).join('') : '<p class="muted">কিছু পেন্ডিং নেই।</p>'}</div>
+    <h2>ইউজার</h2><input id="uq" placeholder="ID, নাম বা ইউজারনেম খুঁজুন"><div class="panel" style="margin-top:10px">${(a.users||[]).map(u => `<div class="row"><div>${esc(u.first_name)} ${u.banned?'<span class="tag neg">বন্ধ</span>':''}
+      <div class="muted">${u.tg_id} · ${taka(u.balance)} · টাস্ক ${bn(u.tasks_done)}</div></div>
+      <div><button class="btn sm" data-add="${u.tg_id}" data-name="${esc(u.first_name)}">টাকা</button> <button class="btn sm alt" data-ban="${u.tg_id}" data-b="${u.banned?0:1}">${u.banned?'চালু':'বন্ধ'}</button></div></div>`).join('') || '<p class="muted">কেউ পাওয়া যায়নি।</p>'}</div>`;
+}
+
+async function loadAdmin(q){
+  try {
+    const [stats, wds, us] = await Promise.all([api('admin_stats'), api('admin_withdrawals'), api('admin_users', { q: q || '' })]);
+    S.adm = { stats, wds: wds.withdrawals, users: us.users, q: q || '' };
+    if (S.tab === 'adm') { const keep = S.adm.q; render(); const i = $('#uq'); if (i) i.value = keep; }
+  } catch (e) { fail(e); }
+}
+
+function bind(){
+  const t = $('#task'); if (t) t.onclick = doTask;
+  document.querySelectorAll('.chip').forEach(c => c.onclick = () => { S.method = c.dataset.m; const n=$('#wnum').value, a=$('#wamt').value; render(); $('#wnum').value=n; $('#wamt').value=a; });
+  const ws = $('#wsend'); if (ws) ws.onclick = doWithdraw;
+  const link = `${CONFIG.REF_LINK_BASE}?startapp=ref_${tg.initDataUnsafe.user?.id}`;
+  const sh = $('#share'); if (sh) sh.onclick = () => tg.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent('অ্যাড দেখে আয় করুন!'));
+  const cp = $('#copy'); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(link); toast('লিংক কপি হয়েছে'); } catch { toast(link); } };
+  const uq = $('#uq'); if (uq) uq.onkeydown = (e) => { if (e.key === 'Enter') loadAdmin(uq.value); };
+  document.querySelectorAll('[data-wd]').forEach(b => b.onclick = async () => {
+    try { const j = await api('admin_set_withdrawal', { id: b.dataset.wd, status: b.dataset.s }); toast(j.result === 'ok' ? 'হয়েছে' : j.result); loadAdmin(S.adm.q); } catch (e) { fail(e); } });
+  document.querySelectorAll('[data-ban]').forEach(b => b.onclick = async () => {
+    try { await api('admin_ban', { target: b.dataset.ban, banned: b.dataset.b === '1' }); loadAdmin(S.adm.q); } catch (e) { fail(e); } });
+  document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => openAdd(b.dataset.add, b.dataset.name));
+}
+
+async function doTask(){
+  if (S.busy) return; S.busy = true; render();
+  try {
+    const s = await api('start_task');
+    if (s.result !== 'ok') throw new Error(s.result);
+    await window.show_12091738({ ymid: String(tg.initDataUnsafe.user?.id) });   // অ্যাড শেষ হলে resolve হয়
+    const c = await api('complete_task');
+    if (c.result !== 'ok') throw new Error(c.result);
+    toast('টাস্ক সম্পন্ন হয়েছে');
+  } catch (e) { toast(MSG[e.message] || 'অ্যাড দেখানো যায়নি। আবার চেষ্টা করুন।'); }
+  S.busy = false;
+  try { S.st = { ...S.st, ...(await api('state')) }; } catch {}
+  render();
+}
+
+async function doWithdraw(){
+  try {
+    const j = await api('withdraw', { method: S.method, number: $('#wnum').value, amount: $('#wamt').value });
+    if (j.result !== 'ok') throw new Error(j.result);
+    toast('রিকোয়েস্ট পাঠানো হয়েছে');
+    S.st = { ...S.st, ...(await api('state')) }; render();
+  } catch (e) { fail(e); }
+}
+
+function openAdd(id, name){
+  $('#sheetBody').innerHTML = `<h2 style="margin-top:0">${esc(name)} (${esc(id)})</h2><p class="muted">কমানোর জন্য মাইনাস সংখ্যা দিন (যেমন -10)।</p>
+    <input id="aamt" inputmode="decimal" placeholder="পরিমাণ (৳)"><input id="anote" placeholder="নোট (ঐচ্ছিক)">
+    <div style="height:12px"></div><button class="btn" id="aok">নিশ্চিত করুন</button><div style="height:8px"></div><button class="btn alt" id="acancel">বন্ধ করুন</button>`;
+  $('#sheet').classList.add('on');
+  $('#acancel').onclick = () => $('#sheet').classList.remove('on');
+  $('#aok').onclick = async () => {
+    try { const j = await api('admin_add', { target: id, amount: $('#aamt').value, note: $('#anote').value });
+      if (j.result !== 'ok') throw new Error(j.result); toast('ব্যালেন্স আপডেট হয়েছে'); $('#sheet').classList.remove('on'); loadAdmin(S.adm.q); } catch (e) { fail(e); }
+  };
+}
+
+boot();
+</script>
+</body>
+</html>
